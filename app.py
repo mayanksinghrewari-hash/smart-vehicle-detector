@@ -1,4 +1,7 @@
+```python
 import streamlit as st
+from inference_sdk import InferenceHTTPClient
+import tempfile
 
 st.set_page_config(
     page_title="Smart Vehicle Damage Detection",
@@ -6,61 +9,62 @@ st.set_page_config(
     layout="wide"
 )
 
+# ---------------- STYLING ----------------
+
 st.markdown("""
 <style>
+
 .hero {
     background: linear-gradient(135deg,#0f172a,#1e3a8a,#06b6d4);
     padding:40px;
     border-radius:20px;
     text-align:center;
     color:white;
-    margin-bottom:20px;
-}
-
-.feature {
-    background:#1e293b;
-    padding:20px;
-    border-radius:15px;
-    text-align:center;
-    color:white;
+    margin-bottom:25px;
 }
 
 .footer {
     text-align:center;
     color:gray;
+    padding:20px;
 }
+
 </style>
 """, unsafe_allow_html=True)
 
+# ---------------- SIDEBAR ----------------
+
 page = st.sidebar.radio(
     "Navigation",
-    ["🏠 Home","🚗 Detection","📊 Analytics","ℹ️ About"]
+    ["🏠 Home", "🚗 Detection", "📊 Analytics", "ℹ️ About"]
 )
+
+# ---------------- HOME ----------------
 
 if page == "🏠 Home":
 
     st.markdown("""
     <div class="hero">
-    <h1>🚗 Smart Vehicle Damage Detection</h1>
+    <h1>🚗 Smart Vehicle Damage Detection System</h1>
     <h3>AI Powered Accident Assessment Platform</h3>
-    <p>Detect vehicle damage instantly using Artificial Intelligence</p>
+    <p>Detect dents, scratches and vehicle damage using Artificial Intelligence.</p>
     </div>
     """, unsafe_allow_html=True)
 
-    col1,col2,col3=st.columns(3)
+    col1, col2, col3 = st.columns(3)
 
     with col1:
-        st.metric("Accuracy","84.5%")
+        st.metric("Model Accuracy", "84.5%")
 
     with col2:
-        st.metric("Dataset Images","6957")
+        st.metric("Dataset Images", "6957")
 
     with col3:
-        st.metric("Damage Classes","10+")
+        st.metric("Damage Classes", "10+")
 
     st.markdown("## Features")
 
-    c1,c2,c3=st.columns(3)
+    c1, c2, c3 = st.columns(3)
 
     with c1:
         st.success("🔍 AI Damage Detection")
@@ -71,54 +75,111 @@ if page == "🏠 Home":
     with c3:
         st.warning("💰 Repair Cost Estimation")
 
-if page == "🚗 Detection":
+# ---------------- DETECTION ----------------
 
-    st.title("Vehicle Damage Detection")
+elif page == "🚗 Detection":
+
+    st.title("🚗 Vehicle Damage Detection")
 
     uploaded_file = st.file_uploader(
         "Upload Vehicle Image",
-        type=["jpg","jpeg","png"]
+        type=["jpg", "jpeg", "png"]
     )
 
     if uploaded_file:
-        st.image(uploaded_file)
 
-        if st.button("Analyze Damage"):
-            st.success("Damage Detected")
+        st.image(uploaded_file, caption="Uploaded Vehicle", use_container_width=True)
 
-            st.write("Damage Type: Dent")
-            st.write("Confidence: 92%")
-            st.write("Severity: Medium")
-            st.write("Estimated Cost: ₹8,000 - ₹12,000")
+        if st.button("🔍 Analyze Damage"):
 
-if page == "📊 Analytics":
+            try:
 
-    st.title("Analytics Dashboard")
+                with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as tmp:
+                    tmp.write(uploaded_file.read())
+                    image_path = tmp.name
 
-    st.bar_chart({
-        "Dents":[40],
-        "Scratches":[30],
-        "Bumper Damage":[20],
-        "Glass Damage":[10]
-    })
+                CLIENT = InferenceHTTPClient(
+                    api_url="https://serverless.roboflow.com",
+                    api_key=st.secrets["ROBOFLOW_API_KEY"]
+                )
 
-if page == "ℹ️ About":
+                result = CLIENT.infer(
+                    image_path,
+                    model_id="automobile-damage-detection/1"
+                )
 
-    st.title("About Project")
+                st.success("Analysis Complete")
+
+                st.subheader("AI Prediction")
+
+                st.json(result)
+
+                st.subheader("Estimated Report")
+
+                st.write("Damage detected by AI model.")
+                st.write("Please inspect prediction data above.")
+                st.write("Estimated repair cost depends on damage severity.")
+
+            except Exception as e:
+                st.error(f"Error: {e}")
+
+# ---------------- ANALYTICS ----------------
+
+elif page == "📊 Analytics":
+
+    st.title("📊 Analytics Dashboard")
+
+    st.write("Sample project analytics")
+
+    chart_data = {
+        "Damage Type": ["Dent", "Scratch", "Bumper", "Glass"],
+        "Count": [40, 30, 20, 10]
+    }
+
+    st.bar_chart(
+        {
+            "Dent": [40],
+            "Scratch": [30],
+            "Bumper": [20],
+            "Glass": [10]
+        }
+    )
+
+# ---------------- ABOUT ----------------
+
+elif page == "ℹ️ About":
+
+    st.title("ℹ️ About Project")
 
     st.write("""
-    Smart Vehicle Damage Detection System uses AI
-    to identify vehicle damage from images.
+    Smart Vehicle Damage Detection System is an AI-based project
+    that identifies vehicle damage from images.
 
     Technologies Used:
     - Python
     - Streamlit
     - Roboflow
     - Computer Vision
+    - CNN / Object Detection
+
+    Objective:
+    To automate vehicle damage assessment and support
+    repair estimation.
     """)
 
+    st.subheader("Project Team")
+
+    st.write("• Mayank Yadav")
+    st.write("• Koustuv Singh")
+    st.write("• Avi Kumar")
+    st.write("• Gaurav Sharma")
+
+# ---------------- FOOTER ----------------
+
 st.markdown("---")
+
 st.markdown(
-    "<div class='footer'>Developed by Mayank Yadav | IDT Project 2026</div>",
+    "<div class='footer'>Developed for IDT Project | Smart Vehicle Damage Detection System</div>",
     unsafe_allow_html=True
 )
+```
