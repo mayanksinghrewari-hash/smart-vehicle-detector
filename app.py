@@ -54,15 +54,43 @@ if uploaded_file:
 
         if len(predictions) > 0:
 
-            st.success(
-                f"Damage Detected! Found {len(predictions)} damage area(s)."
-            )
+    st.success(
+        f"Damage Detected! Found {len(predictions)} damage area(s)."
+    )
 
-            for pred in predictions:
+    repair_costs = {
+        "Scratch": 2500,
+        "Dent": 6000,
+        "Crack": 10000,
+        "Bumper": 8000,
+        "Light": 4500,
+        "Door": 12000,
+        "Fender": 7000
+    }
 
-                st.write(
-                    f"Class: {pred.get('class')} | Confidence: {round(pred.get('confidence',0)*100,2)}%"
-                )
+    total_cost = 0
 
-        else:
-            st.warning("No damage detected.")
+    for pred in predictions:
+
+        damage_class = pred.get("class")
+        confidence = pred.get("confidence", 0)
+
+        st.write(
+            f"Class: {damage_class} | Confidence: {confidence*100:.2f}%"
+        )
+
+        if damage_class in repair_costs:
+            total_cost += repair_costs[damage_class]
+
+    if total_cost < 5000:
+        severity = "Minor Damage"
+    elif total_cost < 15000:
+        severity = "Moderate Damage"
+    else:
+        severity = "Severe Damage"
+
+    st.info(f"Damage Severity: {severity}")
+    st.success(f"Estimated Repair Cost: ₹{total_cost:,}")
+
+else:
+    st.warning("No damage detected.")
