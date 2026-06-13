@@ -23,8 +23,12 @@ if uploaded_file:
 
     st.image(image, caption="Uploaded Image", use_container_width=True)
 
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as temp:
-        image.save(temp.name)
+   with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as temp:
+
+    if image.mode != "RGB":
+        image = image.convert("RGB")
+
+    image.save(temp.name, format="JPEG")
 
         api_key = st.secrets["ROBOFLOW_API_KEY"]
 
