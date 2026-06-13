@@ -51,7 +51,8 @@ if uploaded_file:
         st.json(result)
 
         predictions = result.get("predictions", [])
-                if len(predictions) > 0:
+
+if len(predictions) > 0:
 
     st.success(
         f"Damage Detected! Found {len(predictions)} damage area(s)."
