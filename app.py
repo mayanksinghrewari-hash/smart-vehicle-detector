@@ -52,7 +52,7 @@ if uploaded_file:
 
         predictions = result.get("predictions", [])
 
-        if len(predictions) > 0:
+       if len(predictions) > 0:
 
     st.success(
         f"Damage Detected! Found {len(predictions)} damage area(s)."
@@ -84,15 +84,14 @@ if uploaded_file:
 
     if total_cost < 5000:
         severity = "Minor Damage"
-        
+
     elif total_cost < 15000:
         severity = "Moderate Damage"
-        
+
     else:
         severity = "Severe Damage"
 
     st.info(f"Damage Severity: {severity}")
-    
     st.success(f"Estimated Repair Cost: ₹{total_cost:,}")
 
 else:
