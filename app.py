@@ -10,7 +10,7 @@ st.set_page_config(
 )
 
 st.title("🚗 Smart Vehicle Damage Detection")
-st.write("AI-Based Vehicle Dent & Scratch Detection using Roboflow")
+st.write("Upload a vehicle image and detect damage using Roboflow")
 
 uploaded_file = st.file_uploader(
     "Upload Vehicle Image",
@@ -27,16 +27,16 @@ if uploaded_file:
         use_container_width=True
     )
 
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as temp:
+    if image.mode != "RGB":
+        image = image.convert("RGB")
 
-        if image.mode != "RGB":
-            image = image.convert("RGB")
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as temp:
 
         image.save(temp.name, format="JPEG")
 
         api_key = st.secrets["ROBOFLOW_API_KEY"]
 
-        url = f"https://detect.roboflow.com/car_dent_scratch_detection-1/9?api_key={api_key}"
+        url = f"https://detect.roboflow.com/car-damage-detection-t0g92/3?api_key={api_key}"
 
         with open(temp.name, "rb") as img_file:
 
@@ -48,22 +48,21 @@ if uploaded_file:
         result = response.json()
 
         st.subheader("Detection Results")
-
         st.json(result)
 
         predictions = result.get("predictions", [])
 
-        if predictions:
+        if len(predictions) > 0:
 
-            st.success(f"Detected {len(predictions)} damage area(s)")
+            st.success(
+                f"Damage Detected! Found {len(predictions)} damage area(s)."
+            )
 
             for pred in predictions:
 
                 st.write(
-                    f"Damage Type: {pred['class']} | "
-                    f"Confidence: {round(pred['confidence'] * 100, 2)}%"
+                    f"Class: {pred.get('class')} | Confidence: {round(pred.get('confidence',0)*100,2)}%"
                 )
 
         else:
-
             st.warning("No damage detected.")
