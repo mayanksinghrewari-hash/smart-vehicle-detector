@@ -1,4 +1,7 @@
 import streamlit as st
+from inference_sdk import InferenceHTTPClient
+from PIL import Image
+import tempfile
 
 st.set_page_config(
     page_title="Smart Vehicle Damage Detection",
@@ -6,151 +9,84 @@ st.set_page_config(
     layout="wide"
 )
 
-# ---------- STYLE ----------
-
-st.markdown("""
-<style>
-.hero {
-    background: linear-gradient(135deg,#0f172a,#1e3a8a,#06b6d4);
-    padding: 40px;
-    border-radius: 20px;
-    color: white;
-    text-align: center;
-}
-
-.footer {
-    text-align: center;
-    color: gray;
-    padding: 20px;
-}
-</style>
-""", unsafe_allow_html=True)
-
-# ---------- SIDEBAR ----------
-
-page = st.sidebar.radio(
-    "Navigation",
-    ["🏠 Home", "🚗 Detection", "📊 Analytics", "ℹ️ About"]
+# Roboflow Client
+CLIENT = InferenceHTTPClient(
+    api_url="https://serverless.roboflow.com",
+    api_key=st.secrets["ROBOFLOW_API_KEY"]
 )
 
-# ---------- HOME ----------
+# Header
+st.markdown("""
+# 🚗 Smart Vehicle Damage Detection System
 
-if page == "🏠 Home":
+### CNN-Based Vehicle Damage Analysis
 
-    st.markdown("""
-    <div class="hero">
-        <h1>🚗 Smart Vehicle Damage Detection System</h1>
-        <h3>AI-Based Vehicle Inspection Platform</h3>
-        <p>Detect vehicle damage and estimate repair costs using Computer Vision.</p>
-    </div>
-    """, unsafe_allow_html=True)
+Upload a vehicle image and detect damages using a trained Computer Vision model.
+""")
 
-    st.write("")
+st.divider()
 
-    c1, c2, c3 = st.columns(3)
+uploaded_file = st.file_uploader(
+    "Upload Vehicle Image",
+    type=["jpg", "jpeg", "png"]
+)
 
-    with c1:
-        st.metric("Dataset Images", "6957")
+if uploaded_file:
 
-    with c2:
-        st.metric("Damage Classes", "10+")
+    image = Image.open(uploaded_file)
 
-    with c3:
-        st.metric("Detection Accuracy", "84.5%")
+    col1, col2 = st.columns(2)
 
-    st.subheader("Project Features")
+    with col1:
+        st.image(image, caption="Uploaded Vehicle", use_container_width=True)
 
-    f1, f2, f3 = st.columns(3)
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as temp_file:
+        image.save(temp_file.name)
 
-    with f1:
-        st.success("🔍 Damage Detection")
-
-    with f2:
-        st.info("📈 Severity Analysis")
-
-    with f3:
-        st.warning("💰 Cost Estimation")
-
-# ---------- DETECTION ----------
-
-elif page == "🚗 Detection":
-
-    st.title("Vehicle Damage Detection")
-
-    uploaded_file = st.file_uploader(
-        "Upload Vehicle Image",
-        type=["jpg", "jpeg", "png"]
-    )
-
-    if uploaded_file is not None:
-
-        st.image(
-            uploaded_file,
-            caption="Uploaded Vehicle",
-            use_container_width=True
+        result = CLIENT.infer(
+            temp_file.name,
+            model_id="vehicle-damage-detection-hhxfj/1"
         )
 
-        if st.button("Analyze Damage"):
+    with col2:
 
-            st.success("Damage Analysis Complete")
+        st.subheader("Detection Results")
 
-            st.subheader("Detection Report")
+        predictions = result.get("predictions", [])
 
-            st.write("Damage Type: Dent")
-            st.write("Confidence Score: 92%")
-            st.write("Severity: Moderate")
-            st.write("Estimated Repair Cost: ₹8,000 - ₹12,000")
+        if len(predictions) == 0:
+            st.warning("No damage detected.")
+        else:
 
-# ---------- ANALYTICS ----------
+            st.success(f"{len(predictions)} damage region(s) detected")
 
-elif page == "📊 Analytics":
+            for pred in predictions:
 
-    st.title("Analytics Dashboard")
+                damage_type = pred.get("class", "Damage")
+                confidence = pred.get("confidence", 0)
 
-    st.bar_chart({
-        "Dent": [40],
-        "Scratch": [30],
-        "Bumper": [20],
-        "Glass": [10]
-    })
+                st.write(f"**Damage Type:** {damage_type}")
+                st.write(f"**Confidence:** {confidence*100:.2f}%")
 
-    st.write("Sample damage distribution used for demonstration.")
+                if confidence > 0.8:
+                    cost = "₹15,000 - ₹30,000"
+                elif confidence > 0.5:
+                    cost = "₹8,000 - ₹15,000"
+                else:
+                    cost = "₹3,000 - ₹8,000"
 
-# ---------- ABOUT ----------
+                st.write(f"**Estimated Repair Cost:** {cost}")
+                st.divider()
 
-elif page == "ℹ️ About":
+st.divider()
 
-    st.title("About Project")
+st.markdown("""
+### 📊 Project Information
 
-    st.write("""
-    Smart Vehicle Damage Detection System is an AI-based solution
-    for identifying vehicle damage from images.
+- Model: CNN-based Roboflow Vision Model
+- Framework: Streamlit
+- Damage Detection: Computer Vision
+- Cost Estimation: Rule-based Analysis
 
-    Technologies Used:
-    - Python
-    - Streamlit
-    - Computer Vision
-    - CNN-Based Damage Detection Models
-
-    Objectives:
-    - Detect dents, scratches and cracks
-    - Reduce manual inspection effort
-    - Support repair cost estimation
-    - Assist insurance assessment
-    """)
-
-    st.subheader("Team Members")
-
-    st.write("• Mayank Singh")
-    st.write("• Koustuv Singh")
-    st.write("• Avi Kumar")
-    st.write("• Gaurav Sharma")
-
-# ---------- FOOTER ----------
-
-st.markdown("---")
-
-st.markdown(
-    "<div class='footer'>Smart Vehicle Damage Detection System | IPBL Project 2025-26</div>",
-    unsafe_allow_html=True
-)
+Developed for Academic Project Demonstration.
+""")
