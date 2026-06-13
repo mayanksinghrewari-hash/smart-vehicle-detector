@@ -1,5 +1,5 @@
 import streamlit as st
-from inference_sdk import InferenceHTTPClient
+import requests
 from PIL import Image
 import tempfile
 
@@ -9,22 +9,8 @@ st.set_page_config(
     layout="wide"
 )
 
-# Roboflow Client
-CLIENT = InferenceHTTPClient(
-    api_url="https://serverless.roboflow.com",
-    api_key=st.secrets["ROBOFLOW_API_KEY"]
-)
-
-# Header
-st.markdown("""
-# 🚗 Smart Vehicle Damage Detection System
-
-### CNN-Based Vehicle Damage Analysis
-
-Upload a vehicle image and detect damages using a trained Computer Vision model.
-""")
-
-st.divider()
+st.title("🚗 Smart Vehicle Damage Detection")
+st.write("CNN-Based Vehicle Damage Analysis using Roboflow")
 
 uploaded_file = st.file_uploader(
     "Upload Vehicle Image",
@@ -35,58 +21,55 @@ if uploaded_file:
 
     image = Image.open(uploaded_file)
 
-    col1, col2 = st.columns(2)
+    st.image(image, caption="Uploaded Image", use_container_width=True)
 
-    with col1:
-        st.image(image, caption="Uploaded Vehicle", use_container_width=True)
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as temp:
+        image.save(temp.name)
 
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as temp_file:
-        image.save(temp_file.name)
+        api_key = st.secrets["ROBOFLOW_API_KEY"]
 
-        result = CLIENT.infer(
-            temp_file.name,
-            model_id="vehicle-damage-detection-hhxfj/1"
-        )
+        url = f"https://detect.roboflow.com/vehicle-damage-detection-hhxfj/1?api_key={api_key}"
 
-    with col2:
+        with open(temp.name, "rb") as img_file:
+            response = requests.post(
+                url,
+                files={"file": img_file}
+            )
 
-        st.subheader("Detection Results")
+        result = response.json()
 
-        predictions = result.get("predictions", [])
+    st.subheader("Detection Results")
 
-        if len(predictions) == 0:
-            st.warning("No damage detected.")
-        else:
+    predictions = result.get("predictions", [])
 
-            st.success(f"{len(predictions)} damage region(s) detected")
+    if len(predictions) == 0:
+        st.warning("No damage detected")
+    else:
+        st.success(f"{len(predictions)} damage area(s) detected")
 
-            for pred in predictions:
+        for pred in predictions:
 
-                damage_type = pred.get("class", "Damage")
-                confidence = pred.get("confidence", 0)
+            damage_type = pred.get("class", "Damage")
+            confidence = pred.get("confidence", 0)
 
-                st.write(f"**Damage Type:** {damage_type}")
-                st.write(f"**Confidence:** {confidence*100:.2f}%")
+            st.write(f"### {damage_type}")
+            st.write(f"Confidence: {confidence*100:.2f}%")
 
-                if confidence > 0.8:
-                    cost = "₹15,000 - ₹30,000"
-                elif confidence > 0.5:
-                    cost = "₹8,000 - ₹15,000"
-                else:
-                    cost = "₹3,000 - ₹8,000"
+            if confidence > 0.8:
+                st.write("Estimated Repair Cost: ₹15,000 - ₹30,000")
+            elif confidence > 0.5:
+                st.write("Estimated Repair Cost: ₹8,000 - ₹15,000")
+            else:
+                st.write("Estimated Repair Cost: ₹3,000 - ₹8,000")
 
-                st.write(f"**Estimated Repair Cost:** {cost}")
-                st.divider()
+            st.divider()
 
-st.divider()
-
+st.markdown("---")
 st.markdown("""
-### 📊 Project Information
+### Project Information
 
-- Model: CNN-based Roboflow Vision Model
+- CNN Model: Roboflow Vehicle Damage Detection
 - Framework: Streamlit
-- Damage Detection: Computer Vision
-- Cost Estimation: Rule-based Analysis
-
-Developed for Academic Project Demonstration.
+- Technology: Computer Vision
+- Damage Detection: Deep Learning
 """)
